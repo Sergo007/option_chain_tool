@@ -49,12 +49,12 @@ async fn test_foo() {
         }),
     };
     // Now use the opt_chain macro!
-    let a = opt!(test_struct.value?.value?);
-    let a = opt!(test_struct.value?.value?.value?);
+    let a: Option<&TestStruct2> = opt!(test_struct.value?.value?);
+    let a: Option<&i32> = opt!(test_struct.value?.value?.value?);
 
-    let a = opt!(&test_struct.value?.value?.required_int_value);
-    let a = opt!(&test_struct.value?.value?.required_int_value);
-    let a = opt!(&test_struct.value?.value?.required_value);
-    let a = opt!(&test_struct.value?.my_vec?.get(0)?.name);
+    let a: Option<&i32> = opt!(&test_struct.value?.value?.required_int_value);
+    let a: Option<&i32> = opt!(&test_struct.value?.value?.required_int_value);
+    let a: Option<&String> = opt!(&test_struct.value?.value?.required_value);
+    let a: Option<&String> = opt!(&test_struct.value?.my_vec?.get(0)?.name);
     println!("Macro result: {:?}", a);
 }
