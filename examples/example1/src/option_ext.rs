@@ -56,5 +56,12 @@ async fn test_foo() {
     let a: Option<&i32> = opt!(&test_struct.value?.value?.required_int_value);
     let a: Option<&String> = opt!(&test_struct.value?.value?.required_value);
     let a: Option<&String> = opt!(&test_struct.value?.my_vec?.get(0)?.name);
+    // Print the results
+    let a = opt!(test_struct.value?.value?);
+    let a = opt!(test_struct.value?.value?.value?);
+    let a = opt!(&test_struct.value?.value?.required_int_value);
+    let a = opt!(&test_struct.value?.value?.required_int_value);
+    let a = opt!(&test_struct.value?.value?.required_value);
+    let a = opt!(&test_struct.value?.my_vec?.get(0)?.name);
     println!("Macro result: {:?}", a);
 }

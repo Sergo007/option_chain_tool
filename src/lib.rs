@@ -9,17 +9,28 @@ use proc_macro::{Delimiter, Group, Ident, Spacing, TokenStream, TokenTree};
 /// (|| test_struct.value.as_ref()?.get((|| 1)())?.value.as_ref()?.value.as_ref())().copied()
 #[proc_macro]
 pub fn opt(input: TokenStream) -> TokenStream {
-    let (is_last_optional_chain, input) = remove_last_question_mark(input.clone());
+    // dbg!(input.to_string());
     let split_tokens = split_on_optional_chain(input);
-    // dbg!(aa.clone());
-    // dbg!(input);
+    let split_tokens_len = split_tokens.len();
     let as_ref = TokenStream::from_str(".as_ref()?.").unwrap();
     let mut expr = TokenStream::new();
-    for (i, segment) in split_tokens.clone().into_iter().enumerate() {
-        for tt in segment {
+    let mut is_last_optional_chain = false;
+    for (i, segment) in split_tokens.into_iter().enumerate() {
+        let segment_len = segment.len();
+        for (i_tt, tt) in segment.into_iter().enumerate() {
+            // Skip the last '?' in the segment
+            let is_question_mark = match &tt {
+                TokenTree::Punct(p) if p.as_char() == '?' => true,
+                _ => false,
+            };
+            if is_question_mark && i_tt == segment_len - 1 {
+                is_last_optional_chain = true;
+                // dbg!(segment_len, i_tt, i);
+                continue;
+            }
             expr.extend(TokenStream::from(tt));
         }
-        if i != split_tokens.len() - 1 {
+        if i != split_tokens_len - 1 {
             expr.extend(as_ref.clone());
         }
     }
@@ -30,6 +41,7 @@ pub fn opt(input: TokenStream) -> TokenStream {
     let mut clogure = TokenStream::from_str("|| ").unwrap();
     clogure.extend(expr);
     let resp = call_existing_closure(clogure);
+    // dbg!(resp.clone());
     // dbg!(resp.to_string());
     resp
 }
@@ -42,24 +54,6 @@ fn wrap_some(expr: TokenStream) -> TokenStream {
     ))]);
     ts.extend([TokenTree::Group(Group::new(Delimiter::Parenthesis, expr))]);
     ts
-}
-
-fn remove_last_question_mark(input: TokenStream) -> (bool, TokenStream) {
-    let mut tokens: Vec<TokenTree> = input.into_iter().collect();
-    let mut is_rm = false;
-    // Find the last `?` token from the end
-    if let Some(pos) = tokens.iter().rposition(|tt| match tt {
-        TokenTree::Punct(p) if p.as_char() == '?' => true,
-        _ => false,
-    }) {
-        if tokens.len() - 1 == pos {
-            is_rm = true;
-            tokens.remove(pos);
-        }
-    }
-
-    // Rebuild a new TokenStream
-    (is_rm, tokens.into_iter().collect())
 }
 
 /// Calls an existing closure represented by the TokenStream.
