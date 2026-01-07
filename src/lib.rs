@@ -1,145 +1,66 @@
-use std::str::FromStr;
-
 use proc_macro::{Delimiter, Group, Ident, Punct, Spacing, TokenStream, TokenTree};
+use std::str::FromStr;
 
 /// A procedural macro that splits an optional chaining expression into its segments.
 ///
-/// foo!(test_struct.value?.get((|| 1)())?.value?.value)
-///
-/// (|| test_struct.value.as_ref()?.get((|| 1)())?.value.as_ref()?.value.as_ref())().copied()
+/// foo!(test_struct.value?Ok.my.vec?.my_val.get(0)?.some_field?.ok()?Err)
 #[proc_macro]
 pub fn opt(input: TokenStream) -> TokenStream {
-    // dbg!(input.to_string());
-
-    // let aa = TokenStream::from_str("test_struct.value").unwrap();
-    // let resp = if_let_some(
-    //     aa,
-    //     TokenStream::from_str(
-    //         "{
-    //         // body
-    //     }",
-    //     )
-    //     .unwrap(),
-    // );
-
-    // dbg!(resp.to_string());
-    let aa = TokenStream::from_str("test_struct.value?Ok.my.vec?.my_val.get(0)?.some_field?.ok()?Err")
-        .unwrap();
-    // dbg!(aa.clone());
-    let resp = split_on_optional_variants(aa);
-    for r in resp.iter() {
-        dbg!(
-            &r.variant,
-            r.tokens
-                .clone()
-                .into_iter()
-                .collect::<TokenStream>()
-                .to_string()
-        );
-    }
-    dbg!(resp.len());
-
-    //
-    let split_tokens = split_on_optional_chain(input);
-    let split_tokens_len = split_tokens.len();
-    let as_ref = TokenStream::from_str(".as_ref()?.").unwrap();
-    let mut expr = TokenStream::new();
-    let mut is_last_optional_chain = false;
-    for (i, segment) in split_tokens.into_iter().enumerate() {
-        let segment_len = segment.len();
-        for (i_tt, tt) in segment.into_iter().enumerate() {
-            // Skip the last '?' in the segment
-            let is_question_mark = match &tt {
-                TokenTree::Punct(p) if p.as_char() == '?' => true,
-                _ => false,
-            };
-            if is_question_mark && i_tt == segment_len - 1 {
-                is_last_optional_chain = true;
-                // dbg!(segment_len, i_tt, i);
-                continue;
+    let resp = split_on_optional_variants(input);
+    // for r in resp.iter() {
+    //     let tokens = r
+    //         .tokens
+    //         .clone()
+    //         .into_iter()
+    //         .collect::<TokenStream>()
+    //         .to_string();
+    //     dbg!(format!("Variant: {:?}, Tokens: {}", r.variant, tokens));
+    // }
+    // dbg!(resp.len());
+    let mut result = TokenStream::new();
+    let segments_len = resp.len();
+    for (index, segment) in resp.into_iter().rev().enumerate() {
+        if segments_len - 1 == index {
+            result = if_let(
+                segment.variant,
+                segment.tokens.into_iter().collect(),
+                result,
+            );
+            continue;
+        }
+        {
+            let mut after_eq = TokenStream::new();
+            after_eq.extend([
+                TokenTree::Ident(Ident::new("____v", proc_macro::Span::call_site())),
+                TokenTree::Punct(Punct::new('.', Spacing::Joint)),
+            ]);
+            after_eq.extend(segment.tokens.into_iter());
+            if result.is_empty() {
+                let mut ____v = TokenStream::new();
+                ____v.extend([TokenTree::Ident(Ident::new(
+                    "____v",
+                    proc_macro::Span::call_site(),
+                ))]);
+                result = some_wrapper(____v);
             }
-            expr.extend(TokenStream::from(tt));
-        }
-        if i != split_tokens_len - 1 {
-            expr.extend(as_ref.clone());
+            result = if_let(segment.variant, after_eq, result);
         }
     }
-    if is_last_optional_chain {
-        expr.extend(TokenStream::from_str(".as_ref()?").unwrap());
-    }
-    let expr = wrap_some(expr);
-    let mut clogure = TokenStream::from_str("|| ").unwrap();
-    clogure.extend(expr);
-    let resp = call_existing_closure(clogure);
-    // dbg!(resp.clone());
-    // dbg!(resp.to_string());
-    resp
+
+    result
 }
 
-fn wrap_some(expr: TokenStream) -> TokenStream {
+fn some_wrapper(body: TokenStream) -> TokenStream {
     let mut ts = TokenStream::new();
     ts.extend([TokenTree::Ident(Ident::new(
         "Some",
         proc_macro::Span::call_site(),
     ))]);
-    ts.extend([TokenTree::Group(Group::new(Delimiter::Parenthesis, expr))]);
+    ts.extend([TokenTree::Group(Group::new(Delimiter::Parenthesis, body))]);
     ts
 }
 
-/// Calls an existing closure represented by the TokenStream.
-/// closure: TokenStream ==> represents a closure like `|| expr`
-/// responds to TokenStream representing
-/// (|| expr )()
-fn call_existing_closure(closure: TokenStream) -> TokenStream {
-    let mut ts = TokenStream::new();
-    ts.extend([TokenTree::Group(Group::new(
-        Delimiter::Parenthesis,
-        closure,
-    ))]);
-    ts.extend([TokenTree::Group(Group::new(
-        Delimiter::Parenthesis,
-        TokenStream::new(),
-    ))]);
-    ts
-}
-
-fn split_on_optional_chain(input: TokenStream) -> Vec<Vec<TokenTree>> {
-    let mut iter = input.into_iter().peekable();
-
-    let mut segments: Vec<Vec<TokenTree>> = Vec::new();
-    let mut current: Vec<TokenTree> = Vec::new();
-
-    while let Some(tt) = iter.next() {
-        match &tt {
-            TokenTree::Punct(p) if p.as_char() == '?' && p.spacing() == Spacing::Joint => {
-                if let Some(TokenTree::Punct(dot)) = iter.peek() {
-                    if dot.as_char() == '.' && dot.spacing() == Spacing::Alone {
-                        // Finish current segment
-                        if !current.is_empty() {
-                            segments.push(std::mem::take(&mut current));
-                        }
-
-                        // Consume the '.'
-                        iter.next();
-                        continue;
-                    }
-                }
-
-                // Not actually '?.' → keep '?'
-                current.push(tt);
-            }
-            _ => current.push(tt),
-        }
-    }
-
-    if !current.is_empty() {
-        segments.push(current);
-    }
-
-    segments
-}
-
-fn if_let_some(after_eq: TokenStream, body: TokenStream) -> TokenStream {
+fn if_let(variant: OptionalVariant, after_eq: TokenStream, body: TokenStream) -> TokenStream {
     let mut ts = TokenStream::new();
     ts.extend([TokenTree::Ident(Ident::new(
         "if",
@@ -149,10 +70,32 @@ fn if_let_some(after_eq: TokenStream, body: TokenStream) -> TokenStream {
         "let",
         proc_macro::Span::call_site(),
     ))]);
-    ts.extend([TokenTree::Ident(Ident::new(
-        "Some",
-        proc_macro::Span::call_site(),
-    ))]);
+    match variant {
+        OptionalVariant::Option => {
+            ts.extend([TokenTree::Ident(Ident::new(
+                "Some",
+                proc_macro::Span::call_site(),
+            ))]);
+        }
+        OptionalVariant::Ok => {
+            ts.extend([TokenTree::Ident(Ident::new(
+                "Ok",
+                proc_macro::Span::call_site(),
+            ))]);
+        }
+        OptionalVariant::Err => {
+            ts.extend([TokenTree::Ident(Ident::new(
+                "Err",
+                proc_macro::Span::call_site(),
+            ))]);
+        }
+        OptionalVariant::Required => {
+            // panic!("if_let called with Required variant");
+        }
+        OptionalVariant::Root => {
+            panic!("if_let called with Root variant");
+        }
+    }
     ts.extend([TokenTree::Group(Group::new(
         Delimiter::Parenthesis,
         TokenTree::Ident(Ident::new("____v", proc_macro::Span::call_site())).into(),
@@ -172,14 +115,13 @@ fn if_let_some(after_eq: TokenStream, body: TokenStream) -> TokenStream {
     ts
 }
 
-// use proc_macro::{Ident, Punct, Spacing, TokenStream, TokenTree};
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum OptionalVariant {
-    Root,   // first segment (no ?)
-    Option, // ?.
-    Ok,     // ?Ok.
-    Err,    // ?Err.
+    Root,     // first segment (no ?)
+    Option,   // ?.
+    Ok,       // ?Ok.
+    Err,      // ?Err.
+    Required, // no ?
 }
 
 #[derive(Debug, Clone)]
@@ -201,8 +143,7 @@ pub(crate) fn split_on_optional_variants(input: TokenStream) -> Vec<OptionalSegm
                 // Try to detect ?. / ?Ok. / ?Err.
                 let variant = match iter.peek() {
                     Some(TokenTree::Punct(dot)) if dot.as_char() == '.' => {
-                        iter.next(); // consume '.'                            // consume '.'
-
+                        iter.next(); // consume '.'
                         Some(OptionalVariant::Option)
                     }
 
@@ -224,8 +165,6 @@ pub(crate) fn split_on_optional_variants(input: TokenStream) -> Vec<OptionalSegm
                             Some(TokenTree::Punct(dot)) if dot.as_char() == '.' => Some(v),
                             other => {
                                 // rollback-ish: treat as normal tokens
-                                // current.push(tt.clone());
-                                // current.push(TokenTree::Ident(ident));
                                 if let Some(o) = other {
                                     current.push(o.clone());
                                 }
@@ -250,13 +189,9 @@ pub(crate) fn split_on_optional_variants(input: TokenStream) -> Vec<OptionalSegm
                 }
 
                 // Not a recognized optional-chain operator
-                // dbg!(tt.to_string());
             }
 
-            _ => {
-                // dbg!(tt.to_string());
-                current.push(tt.clone())
-            }
+            _ => current.push(tt.clone()),
         }
     }
 
@@ -273,30 +208,19 @@ pub(crate) fn split_on_optional_variants(input: TokenStream) -> Vec<OptionalSegm
     if input_tokens.last().is_none() {
         return result;
     }
-
+    let result_len = result.len();
     match input_tokens.last().unwrap() {
         TokenTree::Punct(p) if p.as_char() == '?' => {
-            result.push(OptionalSegment {
-                variant: OptionalVariant::Option,
-                tokens: vec![],
-            });
+            result[result_len - 1].variant = OptionalVariant::Option;
         }
         TokenTree::Ident(p) if p.to_string() == "Ok" => {
-            result.push(OptionalSegment {
-                variant: OptionalVariant::Ok,
-                tokens: vec![],
-            });
+            result[result_len - 1].variant = OptionalVariant::Ok;
         }
         TokenTree::Ident(p) if p.to_string() == "Err" => {
-            result.push(OptionalSegment {
-                variant: OptionalVariant::Err,
-                tokens: vec![],
-            });
+            result[result_len - 1].variant = OptionalVariant::Err;
         }
         _ => {
-            // TODO add more detailed message about it
-            // end of ?. / ?Ok. / ?Err. is missing
-            // unreachable!("Unexpected last token: {}", last_token.to_string());
+            result[result_len - 1].variant = OptionalVariant::Required;
         }
     }
     result

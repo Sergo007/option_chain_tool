@@ -1,3 +1,5 @@
+use option_chain_tool::opt;
+
 mod option_ext;
 #[derive(Debug, Clone)]
 struct User {
@@ -34,6 +36,7 @@ fn main() {
         }),
     };
 
+    let a = opt!(user.profile?.address?.city?);
     let a = if let Some(____v) = user.profile.as_ref() {
         if let Some(____v) = ____v.address.as_ref() {
             ____v.city.as_ref()
@@ -44,9 +47,21 @@ fn main() {
         None
     };
 
+    let a = opt!(user.profile?.address?.street);
     let b = if let Some(____v) = user.profile.as_ref() {
         if let Some(____v) = ____v.address.as_ref() {
             Some(&____v.street)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let a = opt!(user.profile?.address?.some_field?Err);
+    let c = if let Some(____v) = &user.profile {
+        if let Some(____v) = &____v.address {
+            Some(____v)
         } else {
             None
         }
@@ -64,7 +79,7 @@ fn main() {
         None
     };
 
-    println!("City: {:?}", a);
-    println!("Street: {:?}", b);
+    println!("City: {:?}", c);
+    // println!("Street: {:?}", b);
     println!("Some Field: {:?}", c);
 }
