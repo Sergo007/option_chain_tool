@@ -55,17 +55,17 @@ async fn test_foo() {
     let a: Option<&TestStruct2> = opt!(test_struct.value?.value?);
     let a: Option<&i32> = opt!(test_struct.value?.value?.value?);
 
-    let a: Option<&i32> = opt!(&test_struct.value?.value?.required_int_value);
-    let a: Option<&i32> = opt!(&test_struct.value?.value?.required_int_value);
-    let a: Option<&String> = opt!(&test_struct.value?.value?.required_value);
-    let a: Option<&String> = opt!(&test_struct.value?.my_vec?.get(0)?.name);
+    let a: Option<&i32> = opt!(test_struct.value?.value?.required_int_value);
+    let a: Option<&i32> = opt!(test_struct.value?.value?.required_int_value);
+    let a: Option<&String> = opt!(test_struct.value?.value?.required_value);
+    let a: Option<&String> = opt!(test_struct.value?.my_vec?.get(0)?.name);
     // Print the results
     let a = opt!(test_struct.value?.value?);
     let a = opt!(test_struct.value?.value?.value?);
-    let a = opt!(&test_struct.value?.value?.required_int_value);
-    let a = opt!(&test_struct.value?.value?.required_int_value);
-    let a = opt!(&test_struct.value?.value?.required_value);
-    let a = opt!(&test_struct.value?.my_vec?.get(0)?.name);
+    let a = opt!(test_struct.value?.value?.required_int_value);
+    let a = opt!(test_struct.value?.value?.required_int_value);
+    let a = opt!(test_struct.value?.value?.required_value);
+    let a = opt!(test_struct.value?.my_vec?.get(0)?.name);
 
     // let a = opt!(test_struct.value?.my_vec?.get(0)?.some_field?Ok);
     let c = if let Some(____v) = &test_struct.value {
