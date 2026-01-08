@@ -62,11 +62,11 @@ Clean, readable, and efficient - without requiring your function to return `Opti
 
 ## Features
 
-- 🪶 **Lightweight**: Just a single `macro_rules!`, zero dependencies (not even the standard library!)
-- 🚀 **Zero overhead**: Compiles down to the same code as manual `if let Some(...) = ...` chains
-- 🎯 **Intuitive**: Uses Rust's familiar `?` operator syntax
-- 🔒 **Type-safe**: Full compile-time type checking
-- 📦 **Works everywhere**: Use in functions returning `()`, concrete types, or anything else
+- 🪶 **Lightweight**: Just a single `macro_rules!`, zero dependencies.
+- 🚀 **Zero overhead**: Compiles down to the same code as manual `if let Some(...) = ...` chains.
+- 🎯 **Intuitive**: Uses Rust's familiar `?` operator syntax.
+- 🔒 **Type-safe**: Full compile-time type checking.
+- 📦 **Works everywhere**: Use in functions returning `()`, concrete types, or anything else.
 
 ## Installation
 
