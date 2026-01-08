@@ -4,6 +4,7 @@ mod option_ext;
 #[derive(Debug, Clone)]
 struct User {
     profile: Option<Profile>,
+    age: Option<i32>,
 }
 
 #[derive(Debug, Clone)]
@@ -18,6 +19,15 @@ struct Address {
     some_field: Result<String, String>,
 }
 
+impl Address {
+    fn get_street(&self) -> &String {
+        &self.street
+    }
+    fn get_city(&self) -> Option<&String> {
+        self.city.as_ref()
+    }
+}
+
 fn main() {
     tracing_subscriber::fmt()
         .with_thread_ids(true)
@@ -27,6 +37,7 @@ fn main() {
         .init();
 
     let user = User {
+        age: Some(30),
         profile: Some(Profile {
             address: Some(Address {
                 city: Some("New York".to_string()),
@@ -36,50 +47,13 @@ fn main() {
         }),
     };
 
+    let a = opt!(user.age?);
+
     let a = opt!(user.profile?.address?.city?);
-    let a = if let Some(____v) = user.profile.as_ref() {
-        if let Some(____v) = ____v.address.as_ref() {
-            ____v.city.as_ref()
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
     let a = opt!(user.profile?.address?.street);
-    let b = if let Some(____v) = user.profile.as_ref() {
-        if let Some(____v) = ____v.address.as_ref() {
-            Some(&____v.street)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
+    let a = opt!(user.profile?.address?.get_city()?);
     let a = opt!(user.profile?.address?.some_field?Err);
-    let c = if let Some(____v) = &user.profile {
-        if let Some(____v) = &____v.address {
-            Some(____v)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
+    let a = opt!(user.profile?.address?.some_field?Ok);
 
-    let c = if let Some(____v) = user.profile.as_ref() {
-        if let Some(____v) = ____v.address.as_ref() {
-            ____v.some_field.as_ref().ok()
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
-    println!("City: {:?}", c);
-    // println!("Street: {:?}", b);
-    println!("Some Field: {:?}", c);
+    println!("City: {:?}", a);
 }

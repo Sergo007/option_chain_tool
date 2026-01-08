@@ -21,14 +21,30 @@ pub fn opt(input: TokenStream) -> TokenStream {
     let segments_len = resp.len();
     for (index, segment) in resp.into_iter().rev().enumerate() {
         if segments_len - 1 == index {
+            if result.is_empty() {
+                let mut ____v = TokenStream::new();
+                ____v.extend([TokenTree::Ident(Ident::new(
+                    "____v",
+                    proc_macro::Span::call_site(),
+                ))]);
+                result = some_wrapper(____v);
+            }
             result = if_let(
                 segment.variant,
                 segment.tokens.into_iter().collect(),
                 result,
+                true,
             );
             continue;
         }
         {
+            let mut is_add_amp = true;
+            if index == 0 {
+                if ends_with_fn_call(&segment.tokens) {
+                    is_add_amp = false;
+                }
+            }
+
             let mut after_eq = TokenStream::new();
             after_eq.extend([
                 TokenTree::Ident(Ident::new("____v", proc_macro::Span::call_site())),
@@ -43,7 +59,7 @@ pub fn opt(input: TokenStream) -> TokenStream {
                 ))]);
                 result = some_wrapper(____v);
             }
-            result = if_let(segment.variant, after_eq, result);
+            result = if_let(segment.variant, after_eq, result, is_add_amp);
         }
     }
 
@@ -60,7 +76,27 @@ fn some_wrapper(body: TokenStream) -> TokenStream {
     ts
 }
 
-fn if_let(variant: OptionalVariant, after_eq: TokenStream, body: TokenStream) -> TokenStream {
+fn ends_with_fn_call(tokens: &[TokenTree]) -> bool {
+    let last = match tokens.last() {
+        Some(tt) => tt,
+        None => return false,
+    };
+
+    if let TokenTree::Group(group) = last {
+        if group.delimiter() == Delimiter::Parenthesis {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn if_let(
+    variant: OptionalVariant,
+    after_eq: TokenStream,
+    body: TokenStream,
+    is_add_amp: bool,
+) -> TokenStream {
     let mut ts = TokenStream::new();
     ts.extend([TokenTree::Ident(Ident::new(
         "if",
@@ -101,7 +137,9 @@ fn if_let(variant: OptionalVariant, after_eq: TokenStream, body: TokenStream) ->
         TokenTree::Ident(Ident::new("____v", proc_macro::Span::call_site())).into(),
     ))]);
     ts.extend([TokenTree::Punct(Punct::new('=', Spacing::Alone))]);
-    ts.extend([TokenTree::Punct(Punct::new('&', Spacing::Joint))]);
+    if is_add_amp {
+        ts.extend([TokenTree::Punct(Punct::new('&', Spacing::Joint))]);
+    }
     ts.extend(after_eq);
     ts.extend([TokenTree::Group(Group::new(Delimiter::Brace, body))]);
     ts.extend([TokenTree::Ident(Ident::new(
