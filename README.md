@@ -1,4 +1,4 @@
-# option_chain_tool
+# option-chain-tool
 
 A Rust macro that brings JavaScript-like optional chaining to Rust, allowing you to use the `?` operator in any context - even in functions that don't return `Option` or `Result`.
 
