@@ -17,9 +17,16 @@ struct VecStruct1 {
 }
 
 #[derive(Debug, Clone)]
+struct OkResp {
+    id: i32,
+    field1: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 struct TestStruct1 {
     value: Option<TestStruct2>,
     my_vec: Option<Vec<VecStruct1>>,
+    some_result_field: Result<OkResp, String>,
 }
 #[derive(Debug, Clone)]
 struct TestStruct2 {
@@ -32,6 +39,10 @@ struct TestStruct2 {
 async fn test_foo() {
     let test_struct = TestStruct {
         value: Some(TestStruct1 {
+            some_result_field: Ok(OkResp {
+                id: 1,
+                field1: Some("Field value".to_string()),
+            }),
             value: Some(TestStruct2 {
                 value: Some(42),
                 required_value: "100".to_string(),
@@ -60,6 +71,7 @@ async fn test_foo() {
     let a: Option<&String> = opt!(test_struct.value?.my_vec?.get(0)?.name);
     // Print the results
     let a = opt!(test_struct.value?.value?);
+    let a = opt!(test_struct.value?.some_result_field?Ok.field1?);
     let a = opt!(test_struct.value?.value?.value?);
     let a = opt!(test_struct.value?.value?.required_int_value);
     let a = opt!(test_struct.value?.value?.required_value);
