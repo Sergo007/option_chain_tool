@@ -3,8 +3,15 @@ members = ["examples/*"]
 
 [package]
 name = "option-chain-tool"
-version = "0.10.0"
+version = "0.11.0"
 edition = "2021"
+description = "A Rust macro that brings JavaScript-like optional chaining to Rust."
+readme = "README.md"
+keywords = ["option", "chain", "macro"]
+# categories = ["rust-patterns", "development-tools::procedural-macro-helpers"]
+repository = "https://github.com/Sergo007/option-chain-tool"
+authors = ["Yatsina Serhii <yatsyna.sergey@gmail.com>"]
+license = "Apache-2.0"
 
 [lib]
 proc-macro = true
